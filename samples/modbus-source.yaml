@@ -1,0 +1,50 @@
+# This commissioning file reads data from a Modbus device
+# and makes it available in JSON form with correctly parsed
+# values on a number of MQTT Topics.
+#
+# Minimal middleware is used to add a Change of Value behavior
+# to the data points, thus reducing the message rate on the broker
+general:
+  name: Modbus Source
+source:
+  driver: modbus
+  connection:
+    protocol: modbus.tcp
+    host: 192.168.2.136
+    port: 8502
+  defaults:
+    operation: subscribe
+    interval:    100 # ms
+    fc:          3
+    length:      2
+    dataType:    uint16BE
+target:
+  driver: mqtt
+  defaults:
+    operation: write
+    topicPrefix: simulator
+    m+keyiddleware:
+    - name: cov
+      params:
+        key: value
+mappings:
+- source:
+    address: 0
+  target:
+    topic: counter
+- source:
+    address: 1
+  target:
+    topic: slowCounter
+- source:
+    address: 2
+  target:
+    topic: sine
+- source:
+    address: 3
+  target:
+    topic: fastSine
+- source:
+    address: 4
+  target:
+    topic: random

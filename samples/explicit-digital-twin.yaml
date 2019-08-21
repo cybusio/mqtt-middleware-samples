@@ -1,0 +1,81 @@
+# This commissioning file implements a MQTT to MQTT mapping
+# It subscribes to a whole topic scope with named wildcards
+# and assembles a complex target JSON object by using the value
+# of the wildcards as keys.
+#
+# Because the device will release an updated object on every change
+# of the input, a simple Change of Value filter on the timestamp
+# with a 1000ms threshold is used to rate-limit the message load.
+general:
+  name: digitalTwin
+# Use MQTT as data source, setting the topicPrefix to `simulator/`
+# which fits the output of the modbus source of these samples
+source:
+  driver: mqtt
+  defaults:
+    topicPrefix: simulator
+    operation: subscribe
+# Use MQTT also as data target, publishing resulting data on the
+# `digitalTwin/` scope
+target:
+  driver: mqtt
+  defaults:
+    topicPrefix: digitalTwin
+    operation: write
+# This setup uses a single mapping, which subscribes to an MQTT
+# wildcard pattern: `simulator/+`. Using the named wildcard feature,
+# the value of the actually received topic at the position of the wildcard
+# is accessible in the `$context.vars` object inside of the middleware
+# expressions
+mappings:
+- source:
+    topic: +key
+  target:
+    topic: model
+# The transform middleware takes the last cached message from the stash and
+# merges it with a new message which contains the dynamically obtained key
+# as a parameter name and the current value as the value. The timestamp is
+# always updated
+# The $merge() function combines the new object with the last one.
+    middleware:
+    - name: transform
+      params:
+        expression: |
+          $merge([
+            $last("cache"),
+            {
+              "timestamp": timestamp,
+              "sine": $key
+            }
+          ])
+# At this point, the updated message is stored on the stash with the label
+# `"cache"` so that it is available on the next middleware run in above
+# transform block. While all released messages are automatically stashed
+# after the middleware has run, this has to be done explicitely in this case.
+# Otherwise, only messages that pass the CoV filter would be subsequently
+# available.
+    - name: stash
+      params:
+        label: cache
+# To limit the message rate, we add a Change-of-Value filter that observes
+# the timestamp property. Adding an absolute deadband of 1000 makes only
+# one message per second get through.
+#
+# Alternative solutions for the same problem could be:
+# - using the filter middleware like this. A special case must be handled
+#   for the very first message, because in this case $last() is not defined
+#
+#   name: filter
+#   params:
+#     expression: |
+#       $last() ? timestamp - $last().timestamp > 1000 : true
+#
+# - using a cov filter on a value that changes seldomly:
+#
+#   name: cov
+#   params:
+#     key: slowCounter
+    - name: cov
+      params:
+        key: timestamp
+        deadband: 1000
