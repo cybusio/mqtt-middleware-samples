@@ -5,7 +5,6 @@ datapoints:
 
 ## Function Code 3 (read holding register)
 
-|---------|---------------------------------------------|----------|
 | Address | Description                                 | Datatype |
 |---------|---------------------------------------------|----------|
 | 0       | Linear Counter that increments every 100ms  | uint16BE |
@@ -13,7 +12,6 @@ datapoints:
 | 2       | Sine Wave                                   | uint16BE |
 | 3       | Sine Wave with double frequency             | uint16BE |
 | 4       | Random Number                               | uint16BE |
-|---------|---------------------------------------------|----------|
 
 
 ## Installation
